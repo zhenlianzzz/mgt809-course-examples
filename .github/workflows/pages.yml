@@ -23,7 +23,7 @@ jobs:
       - name: Verify and unpack approved website assets
         run: |
           base64 --decode website-assets.zip.b64 > website-assets.zip
-          echo 'aa16c94f2eaf3984c0e09f63f8d6acd83699edff513e8bf73540605aac1d0233  website-assets.zip' | sha256sum --check
+          echo 'cde41e52fe1b4f6b62b8e2d29a1faefc8d85ff8239668fa7d87f0291be2a59d3  website-assets.zip' | sha256sum --check
           python3 -m zipfile -e website-assets.zip source
           test -f source/docs/index.html
       - uses: actions/configure-pages@v5
