@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Course Examples · MGT 809</title>
+  <meta name="description" content="Course examples and student workbooks for MGT 809: Analytics in the Age of AI, taught by Zhen Lian at Yale School of Management.">
+  <meta name="theme-color" content="#00356b">
+  <link rel="icon" href="favicon.svg">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #162532;
+      --blue: #00356b;
+      --muted: #5f6d78;
+      --line: #d7dfe5;
+      --soft-blue: #eaf1f8;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 18px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); line-height: 1.5; }
+    a { color: var(--blue); text-underline-offset: 4px; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; }
+    .page { max-width: 1200px; margin: auto; padding: 30px 34px 35px; }
+    .masthead { display: flex; justify-content: space-between; align-items: center; gap: 18px; color: var(--muted); font-size: .72rem; font-weight: bold; letter-spacing: 1px; }
+    .masthead a { text-decoration: none; }
+    .intro { padding: 22px 0 34px; }
+    h1 { margin: 0 0 14px; font-size: clamp(2rem, 4vw, 2.8rem); line-height: 1.1; letter-spacing: -1.4px; }
+    .intro p { margin: 0; color: var(--muted); font-size: .9rem; }
+    h2 { margin: 0; padding-bottom: 14px; font-size: 1.15rem; line-height: 1.3; }
+    .examples { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+    .example { display: grid; grid-template-columns: 98px minmax(0, 1fr) 158px; gap: 26px; align-items: start; padding: 26px 0; border-bottom: 1px solid var(--line); }
+    .lecture { margin: 4px 0 0; font-size: .78rem; color: var(--muted); }
+    .topic { margin: 0 0 4px; color: var(--muted); font-size: .72rem; }
+    h3 { margin: 0 0 6px; font-size: 1.18rem; line-height: 1.3; }
+    h3 a { color: var(--ink); text-decoration: none; }
+    h3 a:hover { color: var(--blue); text-decoration: underline; }
+    .description { margin: 0; max-width: 640px; font-size: .88rem; }
+    .actions { display: flex; flex-direction: column; align-items: stretch; gap: 3px; font-size: .78rem; }
+    .open { display: flex; justify-content: center; align-items: center; min-height: 44px; padding: 9px 14px; border: 1px solid var(--blue); border-radius: 5px; text-decoration: none; font-weight: bold; }
+    .open:hover { background: var(--soft-blue); }
+    .workbook { display: flex; justify-content: center; align-items: center; min-height: 44px; padding: 8px 0; }
+    footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 24px; padding-top: 23px; color: var(--muted); font-size: .72rem; }
+    footer p { margin: 0; }
+    footer a { display: inline-flex; align-items: center; min-height: 44px; }
+    .skip { position: absolute; top: -100px; left: 18px; background: #fff; padding: 10px; z-index: 2; }
+    .skip:focus { top: 10px; }
+    @media (max-width: 760px) {
+      .page { padding: 22px 18px; }
+      .intro { padding: 26px 0 30px; }
+      h1 { max-width: 540px; }
+      .example { grid-template-columns: minmax(0, 1fr); gap: 9px; padding: 22px 0; }
+      .lecture { margin: 0; }
+      .actions { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin-top: 7px; }
+      .open { min-width: 148px; }
+      footer { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#examples">Skip to course examples</a>
+  <div class="page">
+    <header class="masthead">
+      <a href="./">MGT 809</a>
+      <span>FALL 2026</span>
+    </header>
+    <main>
+      <div class="intro">
+        <h1>Analytics in the Age of AI</h1>
+        <p>Zhen Lian · Yale School of Management</p>
+      </div>
+      <section id="examples" aria-labelledby="examples-title">
+        <h2 id="examples-title">Course examples</h2>
+        <ol class="examples">
+          <li class="example">
+            <p class="lecture">Lecture 1</p>
+            <div>
+              <p class="topic">Pricing and demand</p>
+              <h3><a href="fancyish-wines/">Fancy-ish Wines</a></h3>
+              <p class="description">Estimate demand and compare profits across prices and unit costs.</p>
+            </div>
+            <div class="actions">
+              <a class="open" href="fancyish-wines/" aria-label="Open Fancy-ish Wines">Open example</a>
+              <a class="workbook" href="fancyish-wines/fancyish-wines.xlsx" download aria-label="Download Fancy-ish Wines Excel workbook">Excel workbook</a>
+            </div>
+          </li>
+          <li class="example">
+            <p class="lecture">Lecture 2</p>
+            <div>
+              <p class="topic">Linear programming</p>
+              <h3><a href="som-airlines/">SOM Airlines</a></h3>
+              <p class="description">Allocate tickets subject to flight capacity and demand limits.</p>
+            </div>
+            <div class="actions">
+              <a class="open" href="som-airlines/" aria-label="Open SOM Airlines">Open example</a>
+              <a class="workbook" href="som-airlines/downloads/Lecture%202%20Data.xlsx" download aria-label="Download SOM Airlines Excel workbook">Excel workbook</a>
+            </div>
+          </li>
+          <li class="example">
+            <p class="lecture">Lecture 3</p>
+            <div>
+              <p class="topic">Project scheduling</p>
+              <h3><a href="olan-builders/">Olan Builders</a></h3>
+              <p class="description">Schedule activities and evaluate project acceleration costs.</p>
+            </div>
+            <div class="actions">
+              <a class="open" href="olan-builders/" aria-label="Open Olan Builders">Open example</a>
+              <a class="workbook" href="olan-builders/downloads/Lecture%203%20Data.xlsx" download aria-label="Download Olan Builders Excel workbook">Excel workbook</a>
+            </div>
+          </li>
+          <li class="example">
+            <p class="lecture">Lecture 4</p>
+            <div>
+              <p class="topic">Integer programming</p>
+              <h3><a href="assignment-challenge/">The Assignment Challenge</a></h3>
+              <p class="description">Assign students to projects using preference scores and capacity limits.</p>
+            </div>
+            <div class="actions">
+              <a class="open" href="assignment-challenge/" aria-label="Open The Assignment Challenge">Open example</a>
+              <a class="workbook" href="assignment-challenge/downloads/Lecture%204%20Data.xlsx" download aria-label="Download The Assignment Challenge Excel workbook">Excel workbook</a>
+            </div>
+          </li>
+          <li class="example">
+            <p class="lecture">Lecture 5</p>
+            <div>
+              <p class="topic">Nonlinear optimization</p>
+              <h3><a href="next-word-lab/">Train a Language Model</a></h3>
+              <p class="description">Train a 136-weight model on seven country–capital examples.</p>
+            </div>
+            <div class="actions">
+              <a class="open" href="next-word-lab/" aria-label="Open Train a Language Model">Open example</a>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </main>
+    <footer>
+      <p>MGT 809 · Fall 2026</p>
+      <a href="instructor.html">Instructor resources</a>
+    </footer>
+  </div>
+</body>
+</html>
