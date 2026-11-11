@@ -25,6 +25,7 @@ jobs:
           base64 --decode website-assets.zip.b64 > website-assets.zip
           echo 'cde41e52fe1b4f6b62b8e2d29a1faefc8d85ff8239668fa7d87f0291be2a59d3  website-assets.zip' | sha256sum --check
           python3 -m zipfile -e website-assets.zip source
+          cp -R overrides/. source/docs/
           test -f source/docs/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
