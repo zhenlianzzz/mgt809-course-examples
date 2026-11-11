@@ -16,7 +16,7 @@ All five examples and four original student workbooks are included. There is no 
 
 `website-assets.zip.b64` contains the reviewed website archive: HTML, CSS, JavaScript, SVG artwork, and student workbooks. This encoding preserves directories and binary workbook files when publishing through GitHub's web editor. It is not encryption.
 
-The Pages workflow checks the archive's SHA-256 digest, unpacks it, and publishes only `source/docs`. It has read-only repository access and standard GitHub Pages deployment permissions. It does not write back to this repository or use any personal access token.
+The Pages workflow checks the archive's SHA-256 digest, unpacks it, applies the files in `overrides/`, and publishes only `source/docs`. The course homepage is maintained directly in `overrides/index.html`; edit that file to update its text or styling. It has read-only repository access and standard GitHub Pages deployment permissions. It does not write back to this repository or use any personal access token.
 
 To inspect or edit the source locally:
 
@@ -27,6 +27,7 @@ from pathlib import Path
 data = base64.b64decode(Path('website-assets.zip.b64').read_bytes())
 zipfile.ZipFile(io.BytesIO(data)).extractall('source')
 PY
+cp -R overrides/. source/docs/
 python3 -m http.server 4187 --directory source/docs
 ```
 
