@@ -1,0 +1,35 @@
+name: Publish course examples
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify and unpack approved website assets
+        run: |
+          base64 --decode website-assets.zip.b64 > website-assets.zip
+          echo 'aa16c94f2eaf3984c0e09f63f8d6acd83699edff513e8bf73540605aac1d0233  website-assets.zip' | sha256sum --check
+          python3 -m zipfile -e website-assets.zip source
+          test -f source/docs/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: source/docs
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
