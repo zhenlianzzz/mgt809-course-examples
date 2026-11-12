@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Train a tiny language model and watch its capital predictions improve as its weights change and loss falls.">
+<title>Train a language model · MGT 809</title>
+<style>:root{color-scheme:light;--ink:#162532;--blue:#00356b;--soft-blue:#eaf1f8;--muted:#5f6d78;--line:#d7dfe5;--pale:#f4f7f9;--white:#fff;font-family:Arial,Helvetica,sans-serif;font-size:18px}
+*{box-sizing:border-box}body{margin:0;background:var(--white);color:var(--ink)}main{max-width:1200px;padding:30px 34px 35px;margin:auto}button,a,summary{-webkit-tap-highlight-color:transparent}button{font:inherit;cursor:pointer}button:disabled{cursor:default;opacity:.48}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #1b73b9;outline-offset:4px}button{touch-action:manipulation}h1,h2,p{margin:0}h1{font-size:clamp(2rem,4vw,2.8rem);line-height:1.1;font-weight:700;letter-spacing:-1.4px;margin:24px 0 14px}h2{font-size:1.15rem;line-height:1.3}.masthead{display:flex;justify-content:space-between;align-items:center;gap:18px;color:var(--muted);font-size:.72rem;font-weight:bold;letter-spacing:1px}.text-button{border:0;background:transparent;color:var(--blue);padding:6px 0;font-size:.85rem;letter-spacing:0;white-space:nowrap}.intro{font-size:1.05rem;max-width:880px;line-height:1.55}.mapping{display:flex;flex-wrap:wrap;gap:12px 40px;margin:18px 0 24px;font-size:.94rem}.mapping strong{color:var(--blue)}.training{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:22px 0 0}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.toolbar button{border-radius:5px;border:1px solid var(--blue);min-height:44px;padding:10px 18px;font-size:.94rem}.primary{background:var(--blue);color:#fff;min-width:205px}.secondary{background:#fff;color:var(--blue)}.primary:hover:not(:disabled){background:#124a7e}.secondary:hover:not(:disabled){background:var(--soft-blue)}.toolbar .reset{margin-left:auto;background:transparent;color:var(--muted);border-color:var(--line)}.reset:hover{background:var(--pale)}.metrics{display:flex;gap:52px;flex-wrap:wrap;align-items:baseline;margin:24px 0 14px}.metrics>div{display:flex;align-items:baseline;gap:12px}.metric-label{font-size:.88rem}.metrics strong{font-size:1.65rem;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.6px}.baseline{font-size:.78rem;color:var(--muted)}.outof{font-size:1.02rem;color:var(--muted);font-weight:400}.status{font-size:.88rem;color:var(--muted);min-height:41px;line-height:1.4;padding-bottom:13px}#error{color:#9b321d;border:1px solid #9b321d;padding:12px;margin-bottom:14px}.model-view{display:grid;grid-template-columns:1.12fr 1fr;gap:45px;padding:28px 0 24px}.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:15px;margin-bottom:12px}.section-heading>.muted{font-size:.78rem}.all-countries>.section-heading{display:block}.all-countries>.section-heading>.muted{display:block;margin-top:5px}.muted{color:var(--muted)}.small{font-size:.8rem;line-height:1.5}.answers{width:100%;border-collapse:collapse;table-layout:fixed}.answers th{text-align:left;font-size:.75rem;color:var(--muted);font-weight:400;padding:10px 9px;border-bottom:1px solid var(--line)}.answers th:first-child{width:37%}.answers th:nth-child(2){width:35%}.answers th:last-child{width:28%;text-align:right}.answers abbr{text-decoration:none;cursor:help}.answers td{padding:8px 9px;border-bottom:1px solid #e8edf1;height:57px;vertical-align:middle}.answers tr.selected{background:var(--soft-blue)}.country-button{display:block;width:100%;background:none;border:0;color:var(--ink);text-align:left;padding:0;line-height:1.25;font-weight:bold;font-size:.98rem}.country-button small{display:block;font-size:.72rem;font-weight:400;color:var(--muted);margin-top:4px}.answer{font-size:1.05rem;font-weight:bold;display:inline-block}.answer.is-correct{color:var(--blue)}.answer.changed{animation:word-change .55s ease-out}.answers .score-cell{text-align:right;font-variant-numeric:tabular-nums;font-size:.94rem}.mini-track{height:3px;margin:6px 0 0 14px;background:#dce3e9}.mini-fill{height:100%;background:var(--blue);width:0;transition:width .22s ease}.all-countries>p{margin-top:12px}.prediction{padding-left:35px;border-left:1px solid var(--line)}.sentence{font-size:1.8rem;line-height:1.35;letter-spacing:-.5px;margin:18px 0 9px;min-height:87px;max-width:440px}.sentence strong{color:var(--blue);white-space:nowrap}.target{font-size:.9rem;color:var(--muted);margin-bottom:25px}.target strong{color:var(--ink);font-weight:600}.probability-heading{display:flex;justify-content:space-between;color:var(--muted);font-size:.75rem;margin-bottom:10px}.prob-row{display:grid;grid-template-columns:112px 1fr 60px;align-items:center;gap:12px;margin:10px 0;font-size:.93rem}.prob-row .name{font-weight:400}.prob-row.target-word .name{font-weight:bold;color:var(--blue)}.bar-track{height:13px;background:#edf1f4;border-radius:2px;overflow:hidden}.bar-fill{height:100%;width:0;background:#9baab7;transition:width .22s ease}.target-word .bar-fill{background:var(--blue)}.prob-value{font-variant-numeric:tabular-nums;text-align:right;font-size:.88rem}.prediction>p.small{margin-top:18px}.loss-section{border-top:1px solid var(--line);padding:22px 0 16px}#loss-chart{display:block;width:100%;height:180px;color:var(--blue);overflow:visible}#loss-chart text{fill:var(--muted);font-family:Arial,Helvetica,sans-serif;font-size:14px}#loss-chart line{stroke:#dce3e8;stroke-width:1}details{border-top:1px solid var(--line);padding:17px 0;font-size:.93rem;line-height:1.5}summary{cursor:pointer;font-weight:bold;width:fit-content}details p{margin:14px 0;max-width:940px}.explanation{padding-left:25px;line-height:1.8}.weight-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin-top:18px;max-height:440px;overflow-y:auto;padding:4px 4px 4px 0}.weight{background:var(--pale);padding:8px 10px;font-variant-numeric:tabular-nums;font-size:.94rem;white-space:nowrap}.weight small{display:block;font-size:.68rem;color:var(--muted)}a{color:var(--blue)}footer{font-size:.75rem;color:var(--muted);border-top:1px solid var(--line);padding-top:19px;margin-top:2px}@keyframes word-change{from{background:#d8e9f6;transform:translateY(-3px)}to{background:transparent;transform:translateY(0)}}
+@media(max-width:1000px){.metrics{gap:25px}.baseline{display:none}.model-view{gap:25px;grid-template-columns:1.08fr 1fr}.prediction{padding-left:25px}.prob-row{grid-template-columns:102px 1fr 54px;gap:9px}.sentence{font-size:1.55rem}.country-button{font-size:.88rem}.answer{font-size:.94rem}.mapping{gap:10px 25px}.section-heading{display:block}.section-heading>.muted{display:block;margin-top:5px}}
+@media(max-width:760px){main{padding:22px 18px}.masthead{font-size:.6rem;letter-spacing:.4px}h1{letter-spacing:-.8px;margin-top:20px}.intro{font-size:1rem}.mapping{display:grid;gap:8px;font-size:.85rem}.toolbar{gap:8px}.toolbar button{padding:10px 12px;font-size:.86rem}.toolbar .primary{min-width:178px}.toolbar .reset{margin-left:0}.metrics{gap:18px 25px;margin-top:20px}.metrics>div{gap:9px}.metrics strong{font-size:1.45rem}.metric-label{font-size:.8rem}.model-view{grid-template-columns:1fr;gap:26px}.prediction{border-left:0;border-top:1px solid var(--line);padding:24px 0 0}.sentence{min-height:0;max-width:none;font-size:1.7rem}.target{margin-bottom:22px}.country-button{font-size:1rem}.answer{font-size:1.05rem}.answers th{font-size:.71rem;padding:10px 6px}.answers td{padding:10px 6px}.prob-row{grid-template-columns:110px 1fr 58px}.weight-grid{grid-template-columns:repeat(4,minmax(0,1fr));max-height:350px}#loss-chart{height:155px}.loss-section .section-heading>.muted{font-size:.75rem}.text-button{font-size:.75rem}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.mgt-course-nav{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px max(22px,calc((100% - 1200px)/2));background:#132f43;color:#fff;font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;position:relative;z-index:5}.mgt-course-nav a{color:#fff;text-decoration:none;font-weight:600;white-space:nowrap}.mgt-course-nav a:hover{text-decoration:underline}.mgt-course-nav a:focus-visible{outline:2px solid #f0bb86;outline-offset:4px}.mgt-course-nav span{color:#c3d1d9}@media(max-width:480px){.mgt-course-nav span{font-size:10px}}
+
+
+.masthead-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.class-checkin{display:inline-block;background:#173b34;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:600}.class-checkin:hover{background:#26564b}.class-checkin:focus-visible{outline:3px solid #bf712e;outline-offset:3px}@media(max-width:600px){.masthead{flex-wrap:wrap;gap:14px}.masthead-actions{gap:12px}}
+</style>
+</head>
+<body>
+<nav class="mgt-course-nav" aria-label="Course navigation"><a href="../">← All course examples</a><span>MGT 809 · Lecture 5</span></nav>
+<main>
+ <header>
+  <div class="masthead"><span>MGT 809 · NONLINEAR OPTIMIZATION</span><div class="masthead-actions"><a class="class-checkin" href="https://script.google.com/macros/s/AKfycbxfYP-Ye9VfES4hc2hsoIZWI-99bVpepUlIVeIm04DsJK-rUDHfEXQu1e2q7WWzdYMezw/exec" target="_blank" rel="noopener noreferrer">Check in for class ↗</a><button class="text-button" id="download">Download HTML</button></div></div>
+  <h1>Train a language model.</h1>
+  <p class="intro">We supply seven sentences about country capitals. Training changes the <strong>weights</strong> to make the correct final words more likely.</p>
+  <div class="mapping"><span><strong>136 weights</strong> = decision variables</span><span><strong>Average loss</strong> = objective to minimize</span></div>
+ </header>
+ <section class="training" aria-label="Training controls">
+  <div class="toolbar">
+   <button id="step" class="secondary">One update</button>
+   <button id="batch" class="secondary">25 updates</button>
+   <button id="play" class="primary">Train automatically</button>
+   <button id="reset" class="reset">Reset</button>
+  </div>
+  <div class="metrics">
+   <div><span class="metric-label">Average loss <span class="muted">↓</span></span><strong id="loss">2.0123</strong><span class="baseline">started at <span id="start-loss">2.0123</span></span></div>
+   <div><span class="metric-label">Updates</span><strong id="updates">0</strong></div>
+   <div><span class="metric-label">Correct answers</span><strong id="correct">1 <span class="outof">/ 7</span></strong></div>
+  </div>
+  <p id="status" class="status" role="status" aria-live="polite">Start with one update. Watch the answers and the loss.</p>
+  <p id="error" role="alert" hidden></p>
+ </section>
+ <div class="model-view">
+  <section class="all-countries" aria-labelledby="answers-heading">
+   <div class="section-heading"><h2 id="answers-heading">What the model says</h2><span class="muted">Choose a country to inspect it.</span></div>
+   <table class="answers"><thead><tr><th scope="col">Country</th><th scope="col">Model’s answer</th><th scope="col"><abbr title="Probability assigned to the correct training word">P(correct)</abbr></th></tr></thead><tbody id="country-rows"></tbody></table>
+   <p class="small muted">The correct words below each country are the supplied training data.</p>
+  </section>
+  <section class="prediction" aria-labelledby="prediction-heading">
+   <h2 id="prediction-heading">One prediction, up close</h2>
+   <p class="sentence">The capital of <span id="selected-country">France</span> is <strong id="selected-word">Berlin</strong><span class="period">.</span></p>
+   <p class="target">Correct training word: <strong id="selected-target">Paris</strong></p>
+   <div class="probability-heading"><span>Possible next words</span><span>Probability</span></div>
+   <div id="probabilities" class="probabilities"></div>
+   <p class="small muted">Blue marks the correct word. The displayed answer is whichever word currently has the highest probability.</p>
+  </section>
+ </div>
+ <section class="loss-section" aria-labelledby="loss-heading">
+  <div class="section-heading"><h2 id="loss-heading">Loss during training</h2><span class="muted">Lower means a better fit to these seven examples.</span></div>
+  <svg id="loss-chart" viewBox="0 0 1000 180" role="img" aria-label="Average loss starts at 2.0123 before training.">
+   <g id="chart-grid"></g><path id="loss-line" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path><circle id="loss-dot" r="4" fill="currentColor"></circle>
+  </svg>
+ </section>
+ <details id="weight-details"><summary>See the 136 weights being adjusted</summary><p>These are the model’s decision variables. Each training update changes them together.</p><div id="weight-grid" class="weight-grid"></div></details>
+ <details><summary>What happens when I click a training button?</summary>
+  <ol class="explanation"><li>The model predicts probabilities for all seven sentences.</li><li>It calculates average prediction loss: <strong>−ln(probability of the correct word)</strong>.</li><li>It calculates how each weight affects the loss, then updates the weights.</li></ol>
+  <p>The formulas and training sentences stay fixed. All displayed predictions come from the current weights.</p>
+  <p class="small muted">This is the same small, 136-weight model and loss as the Excel exercise. The browser computes gradients through backpropagation and uses Adam updates at a learning rate of 0.03, with weights bounded between −5 and 5. Excel uses GRG Nonlinear. Individual updates can temporarily increase loss.</p>
+  <p class="small muted">The seven examples are also the training data; this demo illustrates fitting them. It does not test knowledge of unseen countries. <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener noreferrer">Transformer architecture reference</a>.</p>
+ </details>
+ <footer>Everything runs in your browser. The downloaded HTML also works offline.</footer>
+</main>
+<script>(()=>{
+"use strict";
+
+const INITIAL_WEIGHTS = [-0.07049108895172045, -0.2239462880982408, 0.08190720940844315, -0.23375596059955603, 0.5469723917912945, 0.26549832870949064, 0.3011276864775254, -0.32710889043981434, -0.4607848668731239, 0.05153014326178292, -0.186278479246797, -0.07856240182883203, -0.3256274835337997, 0.1252100597664892, 0.5796629070621269, 0.08919456169077015, 0.34269727782972625, -0.5401031814022927, 0.1705270542774643, -0.011028054164102583, -0.1873877887005184, 0.13121870114354248, 0.4946901508194616, 0.10929720453455007, 1.1237938819577036, -0.2728404656607024, 0.4241950284850677, -0.8405720162145552, 0.15599130513314316, -0.12957583877613138, -0.18389799328970902, 0.20237836479644356, -0.20687126119497098, 0.24057621405307167, 0.11546306434559238, -0.10196045586767893, -0.60161567760609, 0.2924179897312763, 0.06411713040854833, -0.26620841452381827, 0.13410157793928223, 0.6643923179801198, 0.4131296842334584, -0.1941645143176598, -0.80981141302087, 0.12398642286989897, 0.11410403441557626, -0.023586808100527594, 0.3114527004287228, -0.03513325989550369, 0.22598038188322264, -0.16486582544885767, 0.1689475416333722, 0.1590504845005751, -0.13908496545686516, -0.6543839336825864, 0.06774858729940195, 0.19504650791994743, -0.1746096989411694, -0.19374747820068297, -0.2559542187842418, 0.09113932803850594, 0.07884889914368166, 0.011099518434229672, 0.2931497306529978, -0.1890558609464358, 0.2512899218976119, -0.3419414683748865, -0.236366056105639, 0.3374439908944294, 0.6241919834732322, 0.040334695384379955, 0.4934867814122814, -0.06734485363661373, -0.2507987238773718, -0.03175581680808983, -0.2165783534128269, -0.31341862039626434, -0.05097499658760154, 0.6963334222887619, -0.49801990886216935, -0.14530598595818234, -0.12431658766322073, 0.07774273502229144, 0.2815457388303449, 0.15345923553321097, -0.20245764185624027, 0.1365021926280431, 0.1004959777873704, -0.45844726568595306, -0.6022557314661213, 0.08859344922268461, 0.05696409174061186, 0.18855175426645232, -0.5661853858777135, -0.06598499917630896, -0.15178233447072279, 0.07660798808388117, -0.2431935588794444, -0.42694445659665975, -0.2311086808050296, 0.07997854847357817, 0.4097796917031485, 0.6332552081934167, -0.5486828919865266, 0.24267188842457413, 0.2970622289869285, 0.1473183026811111, 0.04006523045578111, 0.10001040183751052, 0.24140549148200074, -0.07779680920639626, 0.05333399435438055, -0.13564179784207017, 0.21292595592136399, -0.02380878203931742, 0.7969508119891852, 0.36996948620870157, 0.6254389498956544, 0.2544511338573183, 0.10767940113155784, -0.48643624136253283, 0.11644247176731379, 0.05075164221296534, 0.06518234950216736, -0.813149311701227, -0.32653621085817874, 0.14115294392119906, -0.6470705177735862, 0.4259631393038776, -0.4576478383734241, 0.5101632347661599, -0.1697920415342199, 0.6443025563316687, 0.8715006687291217, 0.08394034709414504];
+
+const COUNTRIES=['France','Netherlands','China','Italy','Japan','Germany','Spain'];
+const CITIES=['Paris','Amsterdam','Beijing','Rome','Tokyo','Berlin','Madrid'];
+const BLOCKS=[['Token vectors',0,33],['Position vectors',33,48],['Query',48,57],['Key',57,66],['Value',66,75],['Attention output',75,84],['Hidden input',84,93],['Hidden bias',93,96],['Hidden output',96,105],['Residual bias',105,108],['Word output',108,129],['Word bias',129,136]];
+const zeros=n=>Array(n).fill(0), grid=(n,m)=>Array.from({length:n},()=>zeros(m));
+const mv=(x,w,o,cols=3)=>Array.from({length:cols},(_,j)=>x.reduce((s,v,i)=>s+v*w[o+i*cols+j],0));
+const softmax=z=>{const max=Math.max(...z),e=z.map(v=>Math.exp(v-max)),sum=e.reduce((a,b)=>a+b,0);return {p:e.map(v=>v/sum),logsum:max+Math.log(sum)};};
+function forward(w,country){
+ const ids=[0,1,2,4+country,3];
+ const X=ids.map((id,t)=>[0,1,2].map(j=>w[id*3+j]+w[33+t*3+j]));
+ const Q=mv(X[4],w,48),K=X.map(x=>mv(x,w,57)),V=X.map(x=>mv(x,w,66));
+ const scores=K.map(k=>k.reduce((s,v,j)=>s+v*Q[j],0)/Math.sqrt(3));
+ const A=softmax(scores).p,C=[0,1,2].map(j=>A.reduce((s,a,t)=>s+a*V[t][j],0));
+ const U=mv(C,w,75).map((v,j)=>v+X[4][j]);
+ const H=mv(U,w,84).map((v,j)=>Math.tanh(v+w[93+j]));
+ const R=mv(H,w,96).map((v,j)=>v+U[j]+w[105+j]);
+ const Z=mv(R,w,108,7).map((v,j)=>v+w[129+j]);
+ const result=softmax(Z),P=result.p;
+ return {ids,X,Q,K,V,A,C,U,H,R,Z,P,loss:result.logsum-Z[country],top:P.indexOf(Math.max(...P))};
+}
+
+function evaluate(w,gradients=true){
+ if(w.length!==136||!w.every(Number.isFinite))throw Error('Expected 136 finite weights.');
+ const rows=COUNTRIES.map((_,i)=>forward(w,i));
+ const loss=rows.reduce((s,r)=>s+r.loss,0)/7;
+ const gradient=zeros(136);
+ if(gradients)for(let n=0;n<7;n++){
+  const {ids,X,Q,K,V,A,C,U,H,R,P}=rows[n];
+  const dz=P.map((p,j)=>(p-(j===n?1:0))/7),dr=zeros(3);
+  for(let j=0;j<7;j++){gradient[129+j]+=dz[j];for(let i=0;i<3;i++){gradient[108+i*7+j]+=R[i]*dz[j];dr[i]+=w[108+i*7+j]*dz[j];}}
+  const dh=zeros(3),du=dr.slice();
+  for(let j=0;j<3;j++){gradient[105+j]+=dr[j];for(let i=0;i<3;i++){gradient[96+i*3+j]+=H[i]*dr[j];dh[i]+=w[96+i*3+j]*dr[j];}}
+  for(let j=0;j<3;j++)dh[j]*=1-H[j]*H[j];
+  for(let j=0;j<3;j++){gradient[93+j]+=dh[j];for(let i=0;i<3;i++){gradient[84+i*3+j]+=U[i]*dh[j];du[i]+=w[84+i*3+j]*dh[j];}}
+  const dc=zeros(3);
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){gradient[75+i*3+j]+=C[i]*du[j];dc[i]+=w[75+i*3+j]*du[j];}
+  const da=V.map(v=>v.reduce((s,x,j)=>s+x*dc[j],0)),mean=da.reduce((s,x,t)=>s+x*A[t],0);
+  const ds=A.map((a,t)=>a*(da[t]-mean)),dv=grid(5,3),dk=grid(5,3),dq=zeros(3);
+  for(let t=0;t<5;t++)for(let j=0;j<3;j++){dv[t][j]=A[t]*dc[j];dk[t][j]=ds[t]*Q[j]/Math.sqrt(3);dq[j]+=ds[t]*K[t][j]/Math.sqrt(3);}
+  const dx=grid(5,3);
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+   gradient[48+i*3+j]+=X[4][i]*dq[j];dx[4][i]+=w[48+i*3+j]*dq[j];
+   for(let t=0;t<5;t++){
+    gradient[66+i*3+j]+=X[t][i]*dv[t][j];gradient[57+i*3+j]+=X[t][i]*dk[t][j];
+    dx[t][i]+=w[66+i*3+j]*dv[t][j]+w[57+i*3+j]*dk[t][j];
+   }
+  }
+  for(let j=0;j<3;j++)dx[4][j]+=du[j];
+  for(let t=0;t<5;t++)for(let j=0;j<3;j++){gradient[ids[t]*3+j]+=dx[t][j];gradient[33+t*3+j]+=dx[t][j];}
+ }
+ if(!Number.isFinite(loss)||!gradient.every(Number.isFinite))throw Error('The calculation produced a nonfinite result.');
+ return {loss,rows,gradient,correct:rows.reduce((s,r,i)=>s+Number(r.top===i),0)};
+}
+
+class Trainer{
+ constructor(){this.weights=INITIAL_WEIGHTS.slice();this.m=zeros(136);this.v=zeros(136);this.steps=0;this.rate=0.03;this.current=evaluate(this.weights);this.history=[this.current.loss];}
+ step(){
+  const t=this.steps+1,next=this.weights.slice();
+  for(let i=0;i<136;i++){
+   const g=this.current.gradient[i];this.m[i]=.9*this.m[i]+.1*g;this.v[i]=.999*this.v[i]+.001*g*g;
+   next[i]=Math.max(-5,Math.min(5,next[i]-this.rate*(this.m[i]/(1-.9**t))/(Math.sqrt(this.v[i]/(1-.999**t))+1e-8)));
+  }
+  const result=evaluate(next);this.weights=next;this.steps=t;this.current=result;this.history.push(result.loss);return result;
+ }
+}
+
+const $=id=>document.getElementById(id),MAX_STEPS=1000;
+let trainer=new Trainer(),selected=0,running=false,timer=null,runEnd=0,autoMode=false;
+const initialLoss=trainer.current.loss;
+const pct=p=>(p*100).toFixed(1)+'%',lossLabel=x=>x<.0001?x.toExponential(2):x.toFixed(4);
+const rowNodes=[],probNodes=[],weightNodes=[];
+$('country-rows').replaceChildren();$('probabilities').replaceChildren();$('weight-grid').replaceChildren();
+COUNTRIES.forEach((country,i)=>{
+ const row=document.createElement('tr');row.innerHTML=`<td><button type="button" class="country-button" aria-pressed="${i===0}">${country}<small>Correct: ${CITIES[i]}</small></button></td><td><span class="answer"></span></td><td class="score-cell"><span class="percent"></span><div class="mini-track" aria-hidden="true"><div class="mini-fill"></div></div></td>`;
+ const button=row.querySelector('button');button.addEventListener('click',()=>{selected=i;render();});
+ $('country-rows').append(row);rowNodes.push({row,button,answer:row.querySelector('.answer'),percent:row.querySelector('.percent'),fill:row.querySelector('.mini-fill'),lastTop:null});
+ const bar=document.createElement('div');bar.className='prob-row';bar.innerHTML=`<span class="name">${CITIES[i]}</span><div class="bar-track" aria-hidden="true"><div class="bar-fill"></div></div><span class="prob-value"></span>`;$('probabilities').append(bar);probNodes.push({bar,fill:bar.querySelector('.bar-fill'),value:bar.querySelector('.prob-value')});
+});
+for(let i=0;i<136;i++){const el=document.createElement('div');el.className='weight';el.innerHTML=`<small>Weight ${i+1}</small><span></span>`;el.title=BLOCKS.find(([,a,b])=>i>=a&&i<b)[0];$('weight-grid').append(el);weightNodes.push(el.querySelector('span'));}
+
+function chart(){
+ const history=trainer.history,w=1000,h=180,left=53,right=14,top=14,bottom=32;
+ const maxY=Math.max(initialLoss,...history)*1.08,maxX=Math.max(50,Math.ceil(trainer.steps/50)*50);
+ const x=i=>left+(w-left-right)*i/maxX,y=l=>top+(h-top-bottom)*(1-l/maxY);
+ $('loss-line').setAttribute('d',history.map((v,i)=>(i?'L':'M')+x(i).toFixed(2)+','+y(v).toFixed(2)).join(' '));
+ $('loss-dot').setAttribute('cx',x(trainer.steps));$('loss-dot').setAttribute('cy',y(trainer.current.loss));
+ const parts=[];for(const value of [0,maxY/2,maxY]){parts.push(`<line x1="${left}" x2="${w-right}" y1="${y(value)}" y2="${y(value)}"/><text x="${left-10}" y="${y(value)+5}" text-anchor="end">${value.toFixed(1)}</text>`);}
+ for(const value of [0,maxX/2,maxX])parts.push(`<text x="${x(value)}" y="${h-10}" text-anchor="middle">${value}</text>`);
+ parts.push(`<text x="${w/2}" y="${h-10}" text-anchor="middle">Training updates</text>`);
+ // Put the axis title above the endpoint labels to keep all text separate.
+ parts[parts.length-1]=`<text x="${w-15}" y="${top+13}" text-anchor="end">Training updates →</text>`;
+ $('chart-grid').innerHTML=parts.join('');
+ $('loss-chart').setAttribute('aria-label',`Average prediction loss: ${lossLabel(initialLoss)} before training, ${lossLabel(trainer.current.loss)} after ${trainer.steps} updates.`);
+}
+function renderWeights(){if($('weight-details').open)weightNodes.forEach((el,i)=>{el.textContent=trainer.weights[i].toFixed(4);});}
+function render(){
+ const state=trainer.current;
+ $('loss').textContent=lossLabel(state.loss);$('start-loss').textContent=lossLabel(initialLoss);$('updates').textContent=trainer.steps;$('correct').innerHTML=`${state.correct} <span class="outof">/ 7</span>`;
+ rowNodes.forEach((el,i)=>{
+  const row=state.rows[i];el.row.classList.toggle('selected',i===selected);el.button.setAttribute('aria-pressed',String(i===selected));
+  el.answer.classList.toggle('is-correct',row.top===i);el.answer.textContent=CITIES[row.top];
+  if(el.lastTop!==null&&el.lastTop!==row.top){el.answer.classList.remove('changed');void el.answer.offsetWidth;el.answer.classList.add('changed');}el.lastTop=row.top;
+  el.percent.textContent=pct(row.P[i]);el.fill.style.width=pct(row.P[i]);
+ });
+ const current=state.rows[selected];$('selected-country').textContent=COUNTRIES[selected];$('selected-word').textContent=CITIES[current.top];$('selected-target').textContent=CITIES[selected];
+ probNodes.forEach((el,i)=>{el.bar.classList.toggle('target-word',i===selected);el.fill.style.width=pct(current.P[i]);el.value.textContent=pct(current.P[i]);});
+ $('step').disabled=running||trainer.steps>=MAX_STEPS;$('batch').disabled=running||trainer.steps>=MAX_STEPS;$('play').disabled=!running&&trainer.steps>=MAX_STEPS;$('play').textContent=running?'Pause':'Train automatically';
+ renderWeights();chart();
+}
+function announce(text){$('status').textContent=text;}
+function stop(message){clearTimeout(timer);timer=null;running=false;render();if(message)announce(message);}
+function report(){return `${trainer.steps} updates. ${trainer.current.correct} of 7 answers correct. Average loss ${lossLabel(trainer.current.loss)}.`;}
+function advance(){
+ try{trainer.step();render();return true;}catch(error){stop('Training stopped. Reset to start again.');$('error').hidden=false;$('error').textContent=error.message;return false;}
+}
+function tick(){
+ if(!running)return;
+ if(!advance())return;
+ if(trainer.steps>=runEnd){stop(report());return;}
+ if(autoMode&&trainer.current.loss<.01&&trainer.current.correct===7){stop('All seven answers are correct and loss is below 0.01. Paused here; you can keep taking updates.');return;}
+ timer=setTimeout(tick,240);
+}
+function run(count,automatic){
+ if(running){stop('Paused. '+report());return;}
+ if(trainer.steps>=MAX_STEPS)return;
+ autoMode=automatic;runEnd=Math.min(trainer.steps+count,MAX_STEPS);running=true;
+ announce('Training: every update adjusts all 136 weights using the seven examples.');render();timer=setTimeout(tick,150);
+}
+$('step').addEventListener('click',()=>{if(!running&&trainer.steps<MAX_STEPS&&advance())announce(report());});
+$('batch').addEventListener('click',()=>run(25,false));$('play').addEventListener('click',()=>run(MAX_STEPS,true));
+$('reset').addEventListener('click',()=>{clearTimeout(timer);timer=null;running=false;trainer=new Trainer();rowNodes.forEach(x=>x.lastTop=null);$('error').hidden=true;announce('Reset to the starting weights. Take one update or watch training run.');render();});
+$('weight-details').addEventListener('toggle',renderWeights);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stop('Paused while this tab was out of view.');});
+$('download').addEventListener('click',()=>{
+ const copy=document.documentElement.cloneNode(true);copy.querySelector('.mgt-course-nav')?.remove();
+ const html='<!doctype html>\n'+copy.outerHTML;
+ const url=URL.createObjectURL(new Blob([html],{type:'text/html'})),a=document.createElement('a');a.href=url;a.download='Capital-LM-Training.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+render();
+
+})();</script>
+</body></html>
