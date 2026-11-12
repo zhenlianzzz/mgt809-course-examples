@@ -13,7 +13,7 @@
 
 
 .masthead-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.class-checkin{display:inline-block;background:#173b34;color:#fff;text-decoration:none;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:600}.class-checkin:hover{background:#26564b}.class-checkin:focus-visible{outline:3px solid #bf712e;outline-offset:3px}@media(max-width:600px){.masthead{flex-wrap:wrap;gap:14px}.masthead-actions{gap:12px}}
-</style>
+.weight-update{border-bottom:1px solid var(--line);padding:22px 0}.weight-step-values{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:20px 0}.weight-step-values>div{flex:1}.weight-step-values span{display:block;font-size:.85rem;color:var(--muted)}.weight-step-values small{display:block;font-size:.72rem;margin-top:3px}.weight-step-values strong{display:block;font-size:1.65rem;font-variant-numeric:tabular-nums;color:var(--blue);margin-top:10px}.weight-direction{margin:12px 0;font-size:.95rem;line-height:1.5}.step-arrow{font-size:1.5rem!important}@media(max-width:600px){.weight-step-values{gap:8px}.weight-step-values strong{font-size:1.15rem}.weight-step-values span{font-size:.75rem}.weight-step-values small{font-size:.65rem}.step-arrow{font-size:1rem!important}}</style>
 </head>
 <body>
 <nav class="mgt-course-nav" aria-label="Course navigation"><a href="../">← All course examples</a><span>MGT 809 · Lecture 5</span></nav>
@@ -38,6 +38,19 @@
   </div>
   <p id="status" class="status" role="status" aria-live="polite">Start with one update. Watch the answers and the loss.</p>
   <p id="error" role="alert" hidden></p>
+ </section>
+ <section class="weight-update" aria-labelledby="weight-update-heading">
+  <div class="section-heading"><h2 id="weight-update-heading">One weight, one training step</h2><span id="weight-update-step" class="muted">Click “One update” to see the change.</span></div>
+  <p class="small muted">Weight 130 is the output bias for Paris: increasing it raises Paris’s score for every country. Its gradient comes from the <strong>average loss over all seven sentences</strong>.</p>
+  <div class="weight-step-values">
+   <div><span>Current value <small>(before this step)</small></span><strong id="weight-before"></strong></div>
+   <span class="step-arrow" aria-hidden="true">→</span>
+   <div><span>Gradient <small>(local slope)</small></span><strong id="weight-gradient"></strong></div>
+   <span class="step-arrow" aria-hidden="true">→</span>
+   <div><span>Updated value <small>(after this step)</small></span><strong id="weight-after">—</strong></div>
+  </div>
+  <p id="weight-direction" class="weight-direction" role="status"></p>
+  <p class="small muted">Like the fitness problem: the gradient indicates the local downhill direction. Plain gradient descent uses <strong>new weight = old weight − learning rate × gradient</strong>. This demo uses <strong>Adam</strong>, which also uses past gradients to choose the actual update shown above.</p>
  </section>
  <div class="model-view">
   <section class="all-countries" aria-labelledby="answers-heading">
@@ -141,6 +154,8 @@ class Trainer{
 
 const $=id=>document.getElementById(id),MAX_STEPS=1000;
 let trainer=new Trainer(),selected=0,running=false,timer=null,runEnd=0,autoMode=false;
+const TRACKED_WEIGHT=129;
+let lastWeightUpdate=null;
 const initialLoss=trainer.current.loss;
 const pct=p=>(p*100).toFixed(1)+'%',lossLabel=x=>x<.0001?x.toExponential(2):x.toFixed(4);
 const rowNodes=[],probNodes=[],weightNodes=[];
@@ -167,6 +182,17 @@ function chart(){
  $('chart-grid').innerHTML=parts.join('');
  $('loss-chart').setAttribute('aria-label',`Average prediction loss: ${lossLabel(initialLoss)} before training, ${lossLabel(trainer.current.loss)} after ${trainer.steps} updates.`);
 }
+function renderWeightUpdate(){
+ const s=lastWeightUpdate||{before:trainer.weights[TRACKED_WEIGHT],gradient:trainer.current.gradient[TRACKED_WEIGHT]};
+ const signed=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(6);
+ $('weight-before').textContent=signed(s.before);
+ $('weight-gradient').textContent=signed(s.gradient);
+ $('weight-after').textContent=lastWeightUpdate?signed(s.after):'—';
+ $('weight-update-step').textContent=lastWeightUpdate?`Most recent update: ${s.step}`:'Click “One update” to see the change.';
+ const direction=Math.abs(s.gradient)<1e-8?'The local slope is nearly zero.':s.gradient>0?'Positive gradient: decreasing this weight is locally downhill (holding the others fixed).':'Negative gradient: increasing this weight is locally downhill (holding the others fixed).';
+ const move=lastWeightUpdate?` Adam ${s.after>s.before?'increased':s.after<s.before?'decreased':'kept'} this weight${s.after===s.before?' unchanged':''}. Average loss: ${lossLabel(s.lossBefore)} → ${lossLabel(s.lossAfter)}.`:'';
+ $('weight-direction').textContent=direction+move;
+}
 function renderWeights(){if($('weight-details').open)weightNodes.forEach((el,i)=>{el.textContent=trainer.weights[i].toFixed(4);});}
 function render(){
  const state=trainer.current;
@@ -180,13 +206,13 @@ function render(){
  const current=state.rows[selected];$('selected-country').textContent=COUNTRIES[selected];$('selected-word').textContent=CITIES[current.top];$('selected-target').textContent=CITIES[selected];
  probNodes.forEach((el,i)=>{el.bar.classList.toggle('target-word',i===selected);el.fill.style.width=pct(current.P[i]);el.value.textContent=pct(current.P[i]);});
  $('step').disabled=running||trainer.steps>=MAX_STEPS;$('batch').disabled=running||trainer.steps>=MAX_STEPS;$('play').disabled=!running&&trainer.steps>=MAX_STEPS;$('play').textContent=running?'Pause':'Train automatically';
- renderWeights();chart();
+ renderWeightUpdate();renderWeights();chart();
 }
 function announce(text){$('status').textContent=text;}
 function stop(message){clearTimeout(timer);timer=null;running=false;render();if(message)announce(message);}
 function report(){return `${trainer.steps} updates. ${trainer.current.correct} of 7 answers correct. Average loss ${lossLabel(trainer.current.loss)}.`;}
 function advance(){
- try{trainer.step();render();return true;}catch(error){stop('Training stopped. Reset to start again.');$('error').hidden=false;$('error').textContent=error.message;return false;}
+ try{const before=trainer.weights[TRACKED_WEIGHT],gradient=trainer.current.gradient[TRACKED_WEIGHT],lossBefore=trainer.current.loss;trainer.step();lastWeightUpdate={before,gradient,after:trainer.weights[TRACKED_WEIGHT],step:trainer.steps,lossBefore,lossAfter:trainer.current.loss};render();return true;}catch(error){stop('Training stopped. Reset to start again.');$('error').hidden=false;$('error').textContent=error.message;return false;}
 }
 function tick(){
  if(!running)return;
@@ -203,7 +229,7 @@ function run(count,automatic){
 }
 $('step').addEventListener('click',()=>{if(!running&&trainer.steps<MAX_STEPS&&advance())announce(report());});
 $('batch').addEventListener('click',()=>run(25,false));$('play').addEventListener('click',()=>run(MAX_STEPS,true));
-$('reset').addEventListener('click',()=>{clearTimeout(timer);timer=null;running=false;trainer=new Trainer();rowNodes.forEach(x=>x.lastTop=null);$('error').hidden=true;announce('Reset to the starting weights. Take one update or watch training run.');render();});
+$('reset').addEventListener('click',()=>{clearTimeout(timer);timer=null;running=false;trainer=new Trainer();lastWeightUpdate=null;rowNodes.forEach(x=>x.lastTop=null);$('error').hidden=true;announce('Reset to the starting weights. Take one update or watch training run.');render();});
 $('weight-details').addEventListener('toggle',renderWeights);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stop('Paused while this tab was out of view.');});
 $('download').addEventListener('click',()=>{
