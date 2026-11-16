@@ -26,6 +26,9 @@ jobs:
           echo 'cde41e52fe1b4f6b62b8e2d29a1faefc8d85ff8239668fa7d87f0291be2a59d3  website-assets.zip' | sha256sum --check
           python3 -m zipfile -e website-assets.zip source
           cp -R overrides/. source/docs/
+          base64 --decode lecture6-assets.zip.b64 > lecture6-assets.zip
+          echo '75b02bc20a6c59604446f1220acefd2e83f7566a784d9bf08082de4806e2c14d  lecture6-assets.zip' | sha256sum --check
+          python3 -m zipfile -e lecture6-assets.zip source/docs
           test -f source/docs/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
