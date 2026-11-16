@@ -44,3 +44,10 @@ export function assignVisit(route,position,stopId){
   const next=[...route];[next[position],next[other]]=[next[other],next[position]];
   return next;
 }
+
+// Move one visit and shift the intervening visits, preserving their relative order.
+export function moveVisit(route,from,to){
+  parseRoute(route.join(' '));
+  if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=route.length||to>=route.length)throw new Error('Invalid visit position.');
+  const next=[...route];const [id]=next.splice(from,1);next.splice(to,0,id);return next;
+}
