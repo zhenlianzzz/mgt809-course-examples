@@ -22,11 +22,55 @@ function selectForSwap(id){
   else if(swapId===id){swapId=null;renderSelection();}
   else{const from=result.route.indexOf(swapId),index=result.route.indexOf(id),other=swapId;selectedStop=other;applySequence(assignVisit(result.route,index,other),`Swapped visits ${from+1} and ${index+1}.`);}
 }
+const markerOffset={1:[23,-19],2:[-22,12],6:[-22,10],7:[-18,-10],8:[16,-16],9:[24,16]};
+function drawLegLabels(){
+  let labels=$('leg-labels');if(!labels){labels=svg('g',{id:'leg-labels','pointer-events':'none'});$('map').insertBefore(labels,$('stop-markers'));}labels.replaceChildren();
+  if(!result?.rows.length)return;
+  const box=$('map').getBoundingClientRect(),scale=Math.min(box.width/1120,box.height/850)||1;
+  const font=(box.width<500?11:12)/scale,height=23/scale,padding=10/scale,placed=[];
+  const stops=DATA.stops.map(s=>{const p=project(s),o=markerOffset[s.id]??[0,0];return{x:p.x+o[0],y:p.y+o[1],r:28};});
+  const overlap=(a,b,gap=0)=>Math.max(0,Math.min(a.x+a.w+gap,b.x+b.w)-Math.max(a.x-gap,b.x))*Math.max(0,Math.min(a.y+a.h+gap,b.y+b.h)-Math.max(a.y-gap,b.y));
+  result.rows.forEach((leg,index)=>{
+    const a=project(DATA.stops[leg.from]),b=project(DATA.stops[leg.id]),dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1;
+    const text=num(leg.driveMinutes)+' min',width=text.length*font*.57+padding*2;
+    let best=null;
+    for(const fraction of [.5,.35,.65,.2,.8])for(const distance of [0,20,-20,38,-38,58,-58,82,-82,110,-110,145,-145]){
+      const anchor={x:a.x+dx*fraction,y:a.y+dy*fraction},shift=distance/scale;
+      const x=anchor.x-dy/length*shift,y=anchor.y+dx/length*shift,rect={x:Math.max(8,Math.min(1112-width,x-width/2)),y:Math.max(8,Math.min(842-height,y-height/2)),w:width,h:height};
+      const collisions=stops.reduce((sum,p)=>sum+overlap(rect,{x:p.x-p.r,y:p.y-p.r,w:p.r*2,h:p.r*2},6/scale),0)+placed.reduce((sum,p)=>sum+overlap(rect,p,5/scale),0);
+      const outside=Math.max(0,8-rect.x)+Math.max(0,rect.x+width-1112)+Math.max(0,8-rect.y)+Math.max(0,rect.y+height-842);
+      const score=collisions*100+outside*10000+Math.abs(distance)*2+Math.abs(fraction-.5)*45;
+      if(!best||score<best.score)best={...rect,anchor,score,distance,collisions};
+    }
+    // Very short, crowded legs may need a callout outside the segment's normal axis.
+    if(best.collisions){
+      for(let y=8;y+height<842;y+=height+7/scale)for(let x=8;x+width<1112;x+=width/2){
+        const rect={x,y,w:width,h:height},cx=x+width/2,cy=y+height/2;
+        const fraction=Math.max(.1,Math.min(.9,((cx-a.x)*dx+(cy-a.y)*dy)/(length*length))),anchor={x:a.x+dx*fraction,y:a.y+dy*fraction};
+        const collisions=stops.reduce((sum,p)=>sum+overlap(rect,{x:p.x-p.r,y:p.y-p.r,w:p.r*2,h:p.r*2},6/scale),0)+placed.reduce((sum,p)=>sum+overlap(rect,p,5/scale),0);
+        const distance=Math.hypot(cx-anchor.x,cy-anchor.y)*scale,score=collisions*100+distance*2+Math.abs(fraction-.5)*45;
+        if(score<best.score)best={...rect,anchor,score,distance,collisions};
+      }
+    }
+    placed.push(best);const latest=index===result.rows.length-1;
+    const group=svg('g',{class:'leg-label'+(latest?' latest-leg':''),'data-from':leg.from,'data-to':leg.id,'data-minutes':num(leg.driveMinutes),role:'img','aria-label':`${leg.from===0?'Kitchen':`Stop ${leg.from}`} to ${leg.id===0?'kitchen':`stop ${leg.id}`}: ${text}`});
+    if(best.distance){const endX=Math.max(best.x,Math.min(best.x+width,best.anchor.x)),endY=Math.max(best.y,Math.min(best.y+height,best.anchor.y));group.append(svg('line',{class:'leg-leader',x1:best.anchor.x,y1:best.anchor.y,x2:endX,y2:endY,'stroke-width':1/scale}));group.append(svg('circle',{class:'leg-anchor',cx:best.anchor.x,cy:best.anchor.y,r:2/scale}));}
+    group.append(svg('rect',{x:best.x,y:best.y,width,height,rx:5/scale,'stroke-width':1/scale}));
+    group.append(svg('text',{x:best.x+width/2,y:best.y+height/2,'text-anchor':'middle','dominant-baseline':'central','font-size':font},text));labels.append(group);
+  });
+}
+function renderTravelSum(){
+  $('travel-sum').hidden=!result.rows.length;
+  $('travel-sum').innerHTML=result.rows.map((leg,i)=>`${i?'<span class="sum-plus" aria-hidden="true">+</span>':''}<span class="sum-term${i===result.rows.length-1?' latest-term':''}" title="${leg.from} → ${leg.id}${leg.id===0?' (return to kitchen)':''}">${num(leg.driveMinutes)}</span>`).join('')+`<span class="sum-equals">= <b>${num(result.driveMinutes)} min</b></span>`;
+  $('travel-sum').setAttribute('aria-label',result.rows.length?`${result.rows.map(r=>num(r.driveMinutes)).join(' plus ')} equals ${num(result.driveMinutes)} minutes`:'');
+}
+let labelResizeFrame=0;
+new ResizeObserver(()=>{cancelAnimationFrame(labelResizeFrame);labelResizeFrame=requestAnimationFrame(drawLegLabels);}).observe($('map'));
 function drawMap(){
   stopPlayback();const lines=$('route-lines');lines.replaceChildren();
   if(result){for(let i=1;i<result.path.length;i++){const a=project(DATA.stops[result.path[i-1]]),b=project(DATA.stops[result.path[i]]);lines.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'white','stroke-width':8,opacity:.9}));lines.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#00356b','stroke-width':3.4,'marker-end':'url(#route-arrow)',opacity:.85}));}}
   const markers=$('stop-markers');markers.replaceChildren();
-  const offset={1:[23,-19],2:[-22,12],6:[-22,10],7:[-18,-10],8:[16,-16],9:[24,16]};
+  const offset=markerOffset;
   DATA.stops.forEach(s=>{const p=project(s),off=offset[s.id]??[0,0],x=p.x+off[0],y=p.y+off[1];const urgent=stage==='extension'&&s.id&&s.deadlineMinutes===720;
     if(off[0]||off[1]){markers.append(svg('line',{x1:p.x,y1:p.y,x2:x,y2:y,stroke:'#465e72','stroke-width':1.5}));markers.append(svg('circle',{cx:p.x,cy:p.y,r:3,fill:'#00356b'}));}
     const visit=result.route.indexOf(s.id),chosen=visit!==-1,last=s.id===(result.route.at(-1)??0);
@@ -38,6 +82,7 @@ function drawMap(){
     const t=svg('title',{},`${s.name} · ${s.address}`);g.append(t);g.addEventListener('click',()=>mapStop(s.id));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();mapStop(s.id);const next=$('stop-markers').querySelector(`[data-stop-id="${s.id}"]`);next?.focus({preventScroll:true});}});markers.append(g);
     if(s.id===0)markers.append(svg('text',{x:x+29,y:y+7,class:'stop-name'},'Kitchen'));
   });
+  drawLegLabels();
   $('play-route').disabled=!result?.complete;$('map').setAttribute('aria-label',result?.route.length?`New Haven route: kitchen, ${result.route.map(id=>DATA.stops[id].name).join(', ')}${result.complete?', kitchen':'. Choose the next stop'}`:'New Haven map with the kitchen and 12 delivery stops');
   if(selectedStop!==null)showStop(selectedStop);else $('map-info').textContent=result.complete?'Click two locations to swap their visit positions.':result.route.length?'Click an unchosen location to add the next visit.':'Start at kitchen 0. Click your first delivery stop.';
 }
@@ -86,7 +131,7 @@ function renderSequence(){
   $('sequence-minutes').textContent=num(result.driveMinutes);$('sequence-path').textContent=result.path.join(' → ')+(result.complete?'':' → …');
   $('undo-sequence').disabled=!history.length&&(result.complete||!result.route.length);$('reset-sequence').disabled=!result.route.length;
   $('return-label').textContent=result.complete?'Return':'After visit 12';
-  renderSelection();
+  renderTravelSum();renderSelection();
 }
 function applySequence(route,message,record=true){
   const next=evaluate(route,{partial:true}),previous=result;
