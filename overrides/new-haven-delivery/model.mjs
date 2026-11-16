@@ -12,10 +12,18 @@ export function parseRoute(text){
   return route;
 }
 export function scoreArrival(arrival,stop){const lateMinutes=Math.max(0,arrival-stop.deadlineMinutes);return{lateMinutes,refund:lateMinutes>1e-9?stop.refund:0};}
-export function evaluate(route){
-  parseRoute(route.join(' '));
+export function validateVisits(route){
+  if(!Array.isArray(route)||route.length>12||route.some(id=>!Number.isInteger(id)||id<1||id>12)||new Set(route).size!==route.length)throw new Error('Choose each delivery stop at most once, using IDs 1–12.');
+  return route;
+}
+export function appendVisit(route,id){
+  validateVisits(route);return [...validateVisits([...route,id])];
+}
+export function evaluate(route,{partial=false}={}){
+  if(partial)validateVisits(route);else parseRoute(route.join(' '));
+  const complete=route.length===12;
   // Whole seconds preserve the workbook's 0.1-minute road estimates without rounding at each stop.
-  const path=[0,...route,0];let elapsedSeconds=0,drivingSeconds=0,miles=0;
+  const path=[0,...route,...(complete?[0]:[])];let elapsedSeconds=0,drivingSeconds=0,miles=0;
   const rows=[];
   for(let i=1;i<path.length;i++){
     const from=DATA.stops[path[i-1]],stop=DATA.stops[path[i]];
@@ -29,7 +37,7 @@ export function evaluate(route){
   const driveMinutes=drivingSeconds/60,totalMinutes=elapsedSeconds/60;
   const driverCost=totalMinutes/60*DATA.driverPerHour,vehicleCost=miles*DATA.vehiclePerMile;
   const refunds=rows.reduce((s,r)=>s+r.refund,0),lateCount=rows.filter(r=>r.lateMinutes>1e-9).length;
-  return{route:[...route],path,rows,driveMinutes,miles,totalMinutes,returnMinutes:DATA.departureMinutes+totalMinutes,driverCost,vehicleCost,refunds,lateCount,totalLateMinutes:rows.reduce((s,r)=>s+r.lateMinutes,0),totalCost:driverCost+vehicleCost+refunds};
+  return{route:[...route],complete,path,rows,driveMinutes,miles,totalMinutes,returnMinutes:DATA.departureMinutes+totalMinutes,driverCost,vehicleCost,refunds,lateCount,totalLateMinutes:rows.reduce((s,r)=>s+r.lateMinutes,0),totalCost:driverCost+vehicleCost+refunds};
 }
 export function clock(minutes,seconds=false){let sec=Math.round(minutes*60),h=Math.floor(sec/3600)%24,m=Math.floor(sec/60)%60,s=sec%60;return`${h%12||12}:${String(m).padStart(2,'0')}${seconds?':'+String(s).padStart(2,'0'):''} ${h>=12?'PM':'AM'}`;}
 export const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
@@ -37,7 +45,7 @@ export function project(stop){const e=DATA.mapExtent,R=6378137,x=R*stop.lon*Math
 
 // Assigning a stop to a visit position swaps it with its existing position.
 export function assignVisit(route,position,stopId){
-  parseRoute(route.join(' '));
+  validateVisits(route);
   if(!Number.isInteger(position)||position<0||position>=route.length)throw new Error('Invalid visit position.');
   const other=route.indexOf(stopId);
   if(other<0)throw new Error('Invalid stop ID.');
@@ -47,7 +55,7 @@ export function assignVisit(route,position,stopId){
 
 // Move one visit and shift the intervening visits, preserving their relative order.
 export function moveVisit(route,from,to){
-  parseRoute(route.join(' '));
+  validateVisits(route);
   if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=route.length||to>=route.length)throw new Error('Invalid visit position.');
   const next=[...route];const [id]=next.splice(from,1);next.splice(to,0,id);return next;
 }
