@@ -1,12 +1,13 @@
 import {DATA} from './data.mjs';
-import {parseRoute,evaluate,clock,money,project,assignVisit} from './model.mjs?v=sequence1';
+import {parseRoute,evaluate,clock,money,project,assignVisit,moveVisit} from './model.mjs?v=sequence2';
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg',storageKey='mgt809-delivery-v1';
 let stage='base',result=null,baseline=null,selectedStop=null,playing=false,raf=0,playStart=0;
+let swapId=null,dragIndex=null,dropIndex=null,pointerDrag=null;const history=[];
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(n,d=1)=>Number(n).toFixed(d);
 function save(){try{localStorage.setItem(storageKey,JSON.stringify({route:result?.route??null,baseline:baseline?.route??null}));}catch{}}
 function svg(tag,attrs,text){const el=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;}
-function showStop(id){selectedStop=id;const s=DATA.stops[id];$('map-info').textContent=`${id===0?'Kitchen':`Stop ${id}`}: ${s.name} · ${s.address}${id&&stage==='extension'?` · Arrive by ${clock(s.deadlineMinutes)} · Late refund ${money(s.refund)}`:''}`;}
+function showStop(id){selectedStop=id;document.querySelectorAll('#stop-markers .stop').forEach(el=>el.classList.toggle('stop-selected',Number(el.dataset.stopId)===id));const s=DATA.stops[id];$('map-info').textContent=`${id===0?'Kitchen':`Stop ${id}`}: ${s.name} · ${s.address}${id&&stage==='extension'?` · Arrive by ${clock(s.deadlineMinutes)} · Late refund ${money(s.refund)}`:''}`;}
 function drawMap(){
   stopPlayback();const lines=$('route-lines');lines.replaceChildren();
   if(result){for(let i=1;i<result.path.length;i++){const a=project(DATA.stops[result.path[i-1]]),b=project(DATA.stops[result.path[i]]);lines.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'white','stroke-width':8,opacity:.9}));lines.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#00356b','stroke-width':3.4,'marker-end':'url(#route-arrow)',opacity:.85}));}}
@@ -14,7 +15,7 @@ function drawMap(){
   const offset={1:[23,-19],2:[-22,12],6:[-22,10],7:[-18,-10],8:[16,-16],9:[24,16]};
   DATA.stops.forEach(s=>{const p=project(s),off=offset[s.id]??[0,0],x=p.x+off[0],y=p.y+off[1];const urgent=stage==='extension'&&s.id&&s.deadlineMinutes===720;
     if(off[0]||off[1]){markers.append(svg('line',{x1:p.x,y1:p.y,x2:x,y2:y,stroke:'#465e72','stroke-width':1.5}));markers.append(svg('circle',{cx:p.x,cy:p.y,r:3,fill:'#00356b'}));}
-    const g=svg('g',{class:'stop',role:'button',tabindex:0,'aria-label':`${s.id===0?'Kitchen':`Stop ${s.id}`}: ${s.name}${urgent?', noon deadline':''}`});
+    const g=svg('g',{class:'stop','data-stop-id':s.id,role:'button',tabindex:0,'aria-label':`${s.id===0?'Kitchen':`Stop ${s.id}`}: ${s.name}${urgent?', noon deadline':''}`});
     g.append(svg('circle',{cx:x,cy:y,r:s.id===0?20:17,fill:urgent?'#975915':'#00356b',stroke:'white','stroke-width':3}));
     g.append(svg('text',{x,y:y+7,'text-anchor':'middle',class:'stop-label'},s.id));
     const t=svg('title',{},`${s.name} · ${s.address}`);g.append(t);g.addEventListener('click',()=>showStop(s.id));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showStop(s.id);}});markers.append(g);
@@ -43,38 +44,84 @@ function renderComparison(){
 }
 const startingRoute=DATA.stops.slice(1).map(s=>s.id);
 function buildSequence(){
-  $('sequence-slots').innerHTML=startingRoute.map((_,i)=>`<li class="sequence-slot"><label for="visit-${i}"><span>Visit ${i+1}</span><strong>x<sub>${i+1}</sub></strong></label><select id="visit-${i}" data-position="${i}" aria-label="Visit ${i+1}: choose a stop" aria-describedby="sequence-help">${DATA.stops.slice(1).map(s=>`<option value="${s.id}">${s.id} · ${escape(s.name)}</option>`).join('')}</select><div class="move-buttons"><button type="button" data-position="${i}" data-step="-1" aria-label="Move visit ${i+1} earlier" ${i===0?'disabled':''}>← Earlier</button><button type="button" data-position="${i}" data-step="1" aria-label="Move visit ${i+1} later" ${i===11?'disabled':''}>Later →</button></div></li>`).join('');
+  $('sequence-slots').innerHTML=startingRoute.map((_,i)=>`<li class="sequence-slot" data-position="${i}"><button class="drag-handle" type="button" data-position="${i}" title="Drag to reorder; use arrow keys to move" aria-label="Reorder visit ${i+1} with arrow keys">⠿</button><span class="visit-position">x<sub>${i+1}</sub></span><button type="button" class="stop-choice" data-position="${i}" aria-describedby="sequence-help" aria-pressed="false"><span class="stop-id"></span><span class="stop-title"></span></button><div class="move-buttons"><button type="button" data-position="${i}" data-step="-1" title="Move earlier" aria-label="Move visit ${i+1} earlier" ${i===0?'disabled':''}>↑</button><button type="button" data-position="${i}" data-step="1" title="Move later" aria-label="Move visit ${i+1} later" ${i===11?'disabled':''}>↓</button></div></li>`).join('');
+}
+function renderSelection(){
+  document.querySelectorAll('.sequence-slot').forEach((row,i)=>{
+    const selected=result?.route[i]===swapId;
+    row.classList.toggle('selected',selected);row.querySelector('.stop-choice').setAttribute('aria-pressed',String(selected));
+  });
+  $('swap-status').textContent=swapId===null?'Every stop appears exactly once.':`Stop ${swapId} selected. Click another stop to swap; Esc cancels.`;
 }
 function renderSequence(){
   if(!result)return;
-  result.route.forEach((id,i)=>{$('visit-'+i).value=String(id);});
-  $('sequence-minutes').textContent=num(result.driveMinutes);
-  $('sequence-path').textContent=result.path.join(' → ');
+  result.route.forEach((id,i)=>{const row=$('sequence-slots').children[i];row.querySelector('.stop-id').textContent=id;row.querySelector('.stop-title').textContent=DATA.stops[id].name;row.querySelector('.stop-choice').setAttribute('aria-label',`Visit ${i+1}: stop ${id}, ${DATA.stops[id].name}. Select to swap`);});
+  $('sequence-minutes').textContent=num(result.driveMinutes);$('sequence-path').textContent=result.path.join(' → ');$('undo-sequence').disabled=!history.length;renderSelection();
 }
-function applySequence(route,message){
+function applySequence(route,message,record=true){
   const previous=result?.driveMinutes;
-  result=evaluate(route);$('route-input').value=route.join(' ');
+  if(record&&result&&route.some((id,i)=>id!==result.route[i])){history.push([...result.route]);if(history.length>50)history.shift();}
+  swapId=null;result=evaluate(route);$('route-input').value=route.join(' ');
   $('route-error').hidden=true;$('route-input').removeAttribute('aria-invalid');
   const difference=previous===undefined?0:Math.round((result.driveMinutes-previous)*10)/10;
-  const impact=previous===undefined?'':difference===0?'Travel time is unchanged.':`${num(Math.abs(difference))} minutes ${difference>0?'more':'less'} than before.`;
-  $('sequence-feedback').textContent=message+' '+impact;
+  const impact=previous===undefined?'':difference===0?'Travel time unchanged.':`${num(Math.abs(difference))} min ${difference>0?'more':'less'} than before.`;
+  $('sequence-feedback').textContent=impact+' '+message;$('sequence-feedback').dataset.change=difference>0?'up':difference<0?'down':'same';
   save();render();
 }
-$('sequence-slots').addEventListener('change',e=>{
-  if(!e.target.matches('select[data-position]'))return;
-  const position=Number(e.target.dataset.position),id=Number(e.target.value),other=result.route.indexOf(id);
-  applySequence(assignVisit(result.route,position,id),`Swapped visits ${position+1} and ${other+1}. Stop ${id} is now visit ${position+1}.`);
-});
+function moveStop(from,to,focusSelector){
+  if(to<0||to>=12||from===to)return;
+  const id=result.route[from];selectedStop=id;
+  applySequence(moveVisit(result.route,from,to),`Stop ${id}: visit ${from+1} → ${to+1}.`);
+  if(focusSelector)$('sequence-slots').children[to].querySelector(focusSelector)?.focus({preventScroll:true});
+}
 $('sequence-slots').addEventListener('click',e=>{
+  const choice=e.target.closest('.stop-choice');
+  if(choice){const index=Number(choice.dataset.position),id=result.route[index];
+    if(swapId===null){swapId=id;showStop(id);renderSelection();}
+    else if(swapId===id){swapId=null;renderSelection();}
+    else{const from=result.route.indexOf(swapId),other=swapId;selectedStop=other;applySequence(assignVisit(result.route,index,other),`Swapped visits ${from+1} and ${index+1}.`);}
+    return;
+  }
   const button=e.target.closest('button[data-step]');if(!button||button.disabled)return;
-  const position=Number(button.dataset.position),next=position+Number(button.dataset.step),id=result.route[position];
-  applySequence(assignVisit(result.route,next,id),`Moved stop ${id} from visit ${position+1} to visit ${next+1}.`);
-  const direction=next===0?1:next===11?-1:Number(button.dataset.step);
-  $('sequence-slots').querySelector(`button[data-position="${next}"][data-step="${direction}"]`).focus();
+  const from=Number(button.dataset.position),step=Number(button.dataset.step),to=from+step;
+  const direction=to===0?1:to===11?-1:step;
+  moveStop(from,to,`button[data-step="${direction}"]`);
 });
-$('reset-sequence').addEventListener('click',()=>applySequence(startingRoute,'Reset to stop IDs 1–12. This is a starting order, not an optimized route.'));
+$('sequence-slots').addEventListener('keydown',e=>{
+  if(e.key==='Escape'){clearDrag();swapId=null;renderSelection();return;}
+  if(!e.target.matches('.drag-handle')||!['ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
+  e.preventDefault();const from=Number(e.target.dataset.position),to=e.key==='Home'?0:e.key==='End'?11:from+(e.key==='ArrowUp'?-1:1);moveStop(from,to,'.drag-handle');
+});
+function clearDrag(){
+  if(pointerDrag){pointerDrag.ghost?.remove();if(pointerDrag.handle.hasPointerCapture(pointerDrag.pointerId))pointerDrag.handle.releasePointerCapture(pointerDrag.pointerId);}
+  pointerDrag=null;dragIndex=null;dropIndex=null;document.querySelectorAll('.sequence-slot').forEach(row=>row.classList.remove('dragging','drop-before','drop-after'));
+}
+$('sequence-slots').addEventListener('pointerdown',e=>{
+  const handle=e.target.closest('.drag-handle');if(!handle||e.button!==0)return;
+  const row=handle.closest('.sequence-slot');pointerDrag={pointerId:e.pointerId,handle,row,startX:e.clientX,startY:e.clientY,active:false,ghost:null};dragIndex=Number(row.dataset.position);dropIndex=dragIndex;handle.setPointerCapture(e.pointerId);
+});
+$('sequence-slots').addEventListener('pointermove',e=>{
+  if(!pointerDrag||e.pointerId!==pointerDrag.pointerId)return;
+  if(!pointerDrag.active){if(Math.hypot(e.clientX-pointerDrag.startX,e.clientY-pointerDrag.startY)<5)return;
+    pointerDrag.active=true;swapId=null;renderSelection();pointerDrag.row.classList.add('dragging');
+    const ghost=pointerDrag.row.cloneNode(true);ghost.classList.remove('dragging');ghost.classList.add('drag-ghost');ghost.setAttribute('aria-hidden','true');ghost.inert=true;ghost.style.width=pointerDrag.row.getBoundingClientRect().width+'px';document.body.append(ghost);pointerDrag.ghost=ghost;
+  }
+  e.preventDefault();pointerDrag.ghost.style.left=(e.clientX-12)+'px';pointerDrag.ghost.style.top=(e.clientY-19)+'px';
+  const row=document.elementFromPoint(e.clientX,e.clientY)?.closest('.sequence-slot');
+  document.querySelectorAll('#sequence-slots .sequence-slot').forEach(el=>el.classList.remove('drop-before','drop-after'));
+  if(!row||!$('sequence-slots').contains(row)){dropIndex=null;return;}
+  const index=Number(row.dataset.position),rect=row.getBoundingClientRect(),after=e.clientY>rect.top+rect.height/2;
+  let insertion=index+(after?1:0);if(dragIndex<insertion)insertion--;dropIndex=Math.max(0,Math.min(11,insertion));
+  if(dropIndex!==dragIndex)row.classList.add(after?'drop-after':'drop-before');
+});
+$('sequence-slots').addEventListener('pointerup',e=>{
+  if(!pointerDrag||e.pointerId!==pointerDrag.pointerId)return;const from=dragIndex,to=dropIndex,active=pointerDrag.active;clearDrag();if(active&&to!==null)moveStop(from,to,'.drag-handle');
+});
+$('sequence-slots').addEventListener('pointercancel',clearDrag);
+$('undo-sequence').addEventListener('click',()=>{const previous=history.pop();if(previous)applySequence(previous,'Undid the last change.',false);});
+$('reset-sequence').addEventListener('click',()=>applySequence(startingRoute,'Reset to starting order 1–12.'));
 function render(){
-  const ext=stage==='extension';$('results').hidden=!result;$('empty-results').hidden=!!result;$('route-details').hidden=!result;
+  const ext=stage==='extension';$('cost-headline').hidden=!ext;$('results').hidden=!result;$('empty-results').hidden=!!result;$('route-details').hidden=!result;
   if(result){$('route-status').textContent='Valid route · all 12 stops visited once';$('main-label').textContent=ext?'Total delivery cost':'Total driving time';$('main-value').textContent=ext?money(result.totalCost):num(result.driveMinutes);$('main-unit').textContent=ext?'driver + mileage + late refunds':'minutes, including return';$('base-metrics').hidden=ext;$('cost-metrics').hidden=!ext;$('distance').textContent=num(result.miles,2)+' miles';$('driver-cost').textContent=money(result.driverCost);$('vehicle-cost').textContent=money(result.vehicleCost);$('refund-cost').textContent=money(result.refunds);$('late-count').textContent=result.lateCount+' of 12';$('return-time').textContent=clock(result.returnMinutes,true);renderTable();}
   renderSequence();drawMap();renderComparison();
 }
@@ -93,5 +140,5 @@ $('export-route').addEventListener('click',()=>{if(!result)return;const quote=v=
 $('stop-data').innerHTML=DATA.stops.map(s=>`<tr><td>${s.id}</td><td>${escape(s.name)}</td><td>${escape(s.address)}</td><td>${s.serviceMinutes} min</td><td>${s.id?clock(s.deadlineMinutes):'—'}</td><td>${s.id?money(s.refund):'—'}</td></tr>`).join('');
 try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(Array.isArray(saved?.route)){result=evaluate(saved.route);$('route-input').value=result.route.join(' ');}if(Array.isArray(saved?.baseline))baseline=evaluate(saved.baseline);}catch{result=null;baseline=null;}
 buildSequence();
-if(!result){result=evaluate(startingRoute);$('route-input').value=startingRoute.join(' ');}else{$('sequence-feedback').textContent='Your saved sequence is loaded. Change a position to try another route.';}
+if(!result){result=evaluate(startingRoute);$('route-input').value=startingRoute.join(' ');}else{$('sequence-feedback').textContent='Your saved sequence is loaded. Drag a stop or use ↑ ↓ to try another order.';}
 setStage('base');
