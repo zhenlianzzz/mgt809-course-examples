@@ -1,4 +1,4 @@
-import {DATA} from './data.mjs';
+import {DATA} from './data.mjs?v=cost2';
 export function parseRoute(text){
   const tokens=text.trim().split(/[\s,;]+/).filter(Boolean);
   if(!tokens.length)throw new Error('Paste the 12 stop IDs from your Excel route.');
@@ -23,21 +23,20 @@ export function evaluate(route,{partial=false}={}){
   if(partial)validateVisits(route);else parseRoute(route.join(' '));
   const complete=route.length===12;
   // Whole seconds preserve the workbook's 0.1-minute road estimates without rounding at each stop.
-  const path=[0,...route,...(complete?[0]:[])];let elapsedSeconds=0,drivingSeconds=0,miles=0;
+  const path=[0,...route,...(complete?[0]:[])];let elapsedSeconds=0,drivingSeconds=0;
   const rows=[];
   for(let i=1;i<path.length;i++){
     const from=DATA.stops[path[i-1]],stop=DATA.stops[path[i]];
     const driveSeconds=Math.round(DATA.minutes[from.id][stop.id]*60);
-    elapsedSeconds+=from.serviceMinutes*60+driveSeconds;drivingSeconds+=driveSeconds;
-    const legMiles=DATA.miles[from.id][stop.id];miles+=legMiles;
+    elapsedSeconds+=(from.id===0?0:DATA.unloadingMinutes*60)+driveSeconds;drivingSeconds+=driveSeconds;
     const arrival=DATA.departureMinutes+elapsedSeconds/60;
     const timing=stop.id===0?{lateMinutes:0,refund:0}:scoreArrival(arrival,stop);
-    rows.push({order:i,from:from.id,id:stop.id,driveMinutes:driveSeconds/60,miles:legMiles,arrival,...timing});
+    rows.push({order:i,from:from.id,id:stop.id,driveMinutes:driveSeconds/60,arrival,...timing});
   }
   const driveMinutes=drivingSeconds/60,totalMinutes=elapsedSeconds/60;
-  const driverCost=totalMinutes/60*DATA.driverPerHour,vehicleCost=miles*DATA.vehiclePerMile;
+  const driverCost=totalMinutes/60*DATA.driverPerHour;
   const refunds=rows.reduce((s,r)=>s+r.refund,0),lateCount=rows.filter(r=>r.lateMinutes>1e-9).length;
-  return{route:[...route],complete,path,rows,driveMinutes,miles,totalMinutes,returnMinutes:DATA.departureMinutes+totalMinutes,driverCost,vehicleCost,refunds,lateCount,totalLateMinutes:rows.reduce((s,r)=>s+r.lateMinutes,0),totalCost:driverCost+vehicleCost+refunds};
+  return{route:[...route],complete,path,rows,driveMinutes,totalMinutes,returnMinutes:DATA.departureMinutes+totalMinutes,driverCost,refunds,lateCount,totalLateMinutes:rows.reduce((s,r)=>s+r.lateMinutes,0),totalCost:driverCost+refunds};
 }
 export function clock(minutes,seconds=false){let sec=Math.round(minutes*60),h=Math.floor(sec/3600)%24,m=Math.floor(sec/60)%60,s=sec%60;return`${h%12||12}:${String(m).padStart(2,'0')}${seconds?':'+String(s).padStart(2,'0'):''} ${h>=12?'PM':'AM'}`;}
 export const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
